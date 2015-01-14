@@ -27,7 +27,6 @@ class CarNetSim(tk.Frame):
         
         self.initialized = False
         self.hw.bind('<Configure>', self.onresize)
-        #self.vw.bind('<Configure>', self.onresize)
         
         
     def init_canvas(self):
@@ -61,12 +60,8 @@ class CarNetSim(tk.Frame):
             text.yview(tk.END)
             text.configure(state=tk.DISABLED)
             
-        def error(m):
-            write(m)
-            
         sys.stdout = io.IOBase()
         sys.stdout.write = write
-        sys.stderr = sys.stdout
         
         return self.console
         
@@ -91,12 +86,15 @@ class CarNetSim(tk.Frame):
         if not self.initialized:
             hoff, voff = 200, 100
             self.initialized = True
+            
+            scale = event.width/100.0
+            self.world.scale((0,0), event.width/100)
         else:
             hoff = self.canvas.width - self.hw.sash_coord(0)[0]
             voff = self.canvas.height - self.vw.sash_coord(0)[1]
             
-            self.world.scale(0, 0, event.width/float(self.canvas.width))
-            self.world.update()
+            scale = event.width/float(self.canvas.width)
+            self.world.scale((0,0), event.width/float(self.canvas.width))
         
         def place_sash(x, y):
             self.hw.sash_place(0, x, 1)
@@ -114,7 +112,7 @@ class CarNetSim(tk.Frame):
         self.my = event.y
         
     def onm2move(self, event):
-        self.world.move(event.x - self.mx, event.y - self.my)
+        self.world.move((event.x - self.mx, event.y - self.my))
         self.mx = event.x
         self.my = event.y
         
@@ -123,9 +121,9 @@ class CarNetSim(tk.Frame):
            event.y > self.vw.sash_coord(0)[1]:
             return
         elif event.num == 4 or event.delta > 0:
-            self.world.scale(event.x, event.y, 1.2)
+            self.world.scale((event.x, event.y), 1.2)
         elif event.num == 5 or event.delta < 0:
-            self.world.scale(event.x, event.y, 1/1.2)
+            self.world.scale((event.x, event.y), 1/1.2)
         
         
         
