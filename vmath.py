@@ -135,8 +135,6 @@ def isnear(a, b):
     return abs(distsq(a, b)) < EPS
     
 def angle(a, b):
-    print a, b, a.dot(b)
-    print a.dot(b)
     return -math.atan2(-a.y*b.x + a.x*b.y, a.dot(b))
     
 def projectunit(a, b):
