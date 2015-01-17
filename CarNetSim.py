@@ -3,8 +3,11 @@
 import Tkinter as tk
 import io
 import sys
+from time import time
 
 from World import World
+
+SIM_WAIT = int(1000/60.0)
 
 
 # Top level window for the simulator
@@ -28,6 +31,11 @@ class CarNetSim(tk.Frame):
         self.initialized = False
         self.hw.bind('<Configure>', self.onresize)
         
+        self.world = World(self.canvas)
+        
+        self.time = time()
+        self.after(SIM_WAIT, self.onstep)
+        
         
     def init_canvas(self):
         self.canvas = tk.Canvas(self)
@@ -41,8 +49,6 @@ class CarNetSim(tk.Frame):
         self.canvas.bind_all('<MouseWheel>', self.onmwheel)
         self.canvas.bind_all('<Button-4>', self.onmwheel)
         self.canvas.bind_all('<Button-5>', self.onmwheel)
-        
-        self.world = World(self.canvas)
         
         return self.canvas
         
@@ -124,6 +130,18 @@ class CarNetSim(tk.Frame):
             self.world.scale((event.x, event.y), 1.2)
         elif event.num == 5 or event.delta < 0:
             self.world.scale((event.x, event.y), 1/1.2)
+        
+    def onstep(self):
+        t = time()
+        dt = t - self.time
+        self.time = t
+        
+        self.world.step(t)
+        
+        self.after(SIM_WAIT, self.onstep)
+        self.update_idletasks()
+        
+        
         
         
         

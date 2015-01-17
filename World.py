@@ -2,7 +2,7 @@
 import Tkinter as tk
 from itertools import *
 from vmath import *
-from Map import *
+from Map import Map
 
 # Representation of viewable world
 
@@ -69,5 +69,7 @@ class World:
                 ex, ey = self.transform(e.rotate(rot) + pos)
                 self.canvas.coords(i, sx, sy, ex, ey)
                 self.canvas.itemconfig(i, width=self.transform(w))
-        
+    
+    def step(self, dt):
+        self.map.step(self, dt)
         

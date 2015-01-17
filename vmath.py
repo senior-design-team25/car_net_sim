@@ -40,7 +40,7 @@ class vec(tuple):
         return vec(-ax, -ay)
     
     def __invert__((ax,ay)):
-        return vec(ay, ax)
+        return vec(-ay, ax)
         
     def __round__((ax,ay), n):
         return vec(round(ax, n), round(ay, n))
@@ -135,13 +135,13 @@ def isnear(a, b):
     return abs(distsq(a, b)) < EPS
     
 def angle(a, b):
-    return -math.atan2(-a.y*b.x + a.x*b.y, a.dot(b))
+    return -math.atan2(~a * b, a * b)
     
 def projectunit(a, b):
-    return b.scale(a.dot(b))
+    return (a*b)*b
     
 def project(a, (bx,by)):
-    return b.scale(a.dot(b) / b.lensq())
+    return b.scale(a*b / b.lensq())
     
 def lerp(a, b, r):
     return a.scale(1-r) + a.scale(r)
