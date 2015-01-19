@@ -1,157 +1,188 @@
-#!/usr/bin/env python2
-
-import Tkinter as tk
-import io
 import sys
+import io
 from time import time
 
-from World import World
+from vmath import *
+from Map import Map
 
-SIM_WAIT = int(1000/60.0)
+from PySide.QtGui import *
+from PySide.QtCore import *
+from PySide.QtOpenGL import *
 
 
-# Top level window for the simulator
 
-class CarNetSim(tk.Frame):
-    def __init__(self, master=None):
-        tk.Frame.__init__(self, master)
+HANDLE_STYLE = """
+QSplitter::handle:horizontal {
+    background-color: qlineargradient(spread:pad, 
+        x1:0, y1:0, x2:1, y2:0, 
+        stop:0.0 rgba(200, 200, 200, 0),
+        stop:0.1 rgba(100, 100, 100, 255), 
+        stop:0.6 rgba(255, 255, 255, 0));
+}
+
+QSplitter::handle:vertical {
+    background-color: qlineargradient(spread:pad, 
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0.0 rgba(200, 200, 200, 0),
+        stop:0.1 rgba(100, 100, 100, 255), 
+        stop:0.6 rgba(255, 255, 255, 0));
+}
+"""
+
+
+class SimConsole(QTextEdit):
+    def __init__(self):
+        super(SimConsole, self).__init__()        
         
-        self.master.title('Car Network Simulator')
+        self.setReadOnly(True)
         
-        self.pack(fill=tk.BOTH, expand=True)
-        self.hw = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
-        self.vw = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RAISED)
-        self.hw.pack(fill=tk.BOTH, expand=True)
-        self.hw.add(self.vw)
-        
-        self.vw.add(self.init_canvas())
-        self.vw.add(self.init_console_frame())
-        self.hw.add(self.init_control_frame())
-        
-        self.initialized = False
-        self.hw.bind('<Configure>', self.onresize)
-        
-        self.world = World(self.canvas)
-        
-        self.time = time()
-        self.after(SIM_WAIT, self.onstep)
+    def write(self, data):
+        self.insertPlainText(data)
+        self.ensureCursorVisible()
         
         
-    def init_canvas(self):
-        self.canvas = tk.Canvas(self)
-        self.canvas.width = 0
-        self.canvas.height = 0
+class SimScene(QGraphicsView):
+    def __init__(self, map):
+        super(SimScene, self).__init__()
         
-        self.canvas.bind('<Button-2>', self.onm2down)
-        self.canvas.bind('<B2-Motion>', self.onm2move)
-        self.canvas.bind('<Button-3>', self.onm2down)
-        self.canvas.bind('<B3-Motion>', self.onm2move)
-        self.canvas.bind_all('<MouseWheel>', self.onmwheel)
-        self.canvas.bind_all('<Button-4>', self.onmwheel)
-        self.canvas.bind_all('<Button-5>', self.onmwheel)
+        self.scene = QGraphicsScene()
+        self.scene.setSceneRect(0, 0, 100, 100)
         
-        return self.canvas
+        self.scene.addItem(map.graphic)
         
-    def init_console_frame(self):
-        self.console = tk.Frame(self)
-        scroll = tk.Scrollbar(self.console)
-        text = tk.Text(self.console, state=tk.DISABLED, yscrollcommand=scroll.set)
-        scroll.config(command=text.yview)
-        scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        text.pack(fill=tk.BOTH, expand=True)
+        self.setScene(self.scene)
+        self.setStyleSheet('background: black; border: 0')
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
-        def write(m):
-            text.configure(state=tk.NORMAL)
-            text.insert(tk.END, m)
-            text.yview(tk.END)
-            text.configure(state=tk.DISABLED)
+        self.setViewport(QGLWidget())
+        
+    def mousePressEvent(self, event):
+        if not (Qt.LeftButton & event.buttons()) and \
+           (Qt.MidButton | Qt.RightButton) & event.buttons():
+            self.mouse = event.pos()
+        
+    def mouseMoveEvent(self, event):
+        if not (Qt.LeftButton & event.buttons()) and \
+           (Qt.MidButton | Qt.RightButton) & event.buttons():
+            mouse = event.pos()
+            delta = mouse - self.mouse
+            self.mouse = mouse
             
-        sys.stdout = io.IOBase()
-        sys.stdout.write = write
+            hbar = self.horizontalScrollBar()
+            vbar = self.verticalScrollBar()
+            hbar.setValue(hbar.value() - delta.x())
+            vbar.setValue(vbar.value() - delta.y())
         
-        return self.console
+    def wheelEvent(self, event):
+        hbar = self.horizontalScrollBar()
+        vbar = self.verticalScrollBar()
+        pos = QPointF(hbar.value(), vbar.value()) + event.pos()
         
-    def init_control_frame(self):
-        self.control = tk.Frame(self)
-        
-        def hello():
-            print "Hello World!"
-            
-        def error():
-            raise Error("Error!")
-            
-        tk.Button(self.control, text='Hello', command=hello).pack(fill=tk.X)
-        tk.Button(self.control, text='Error', command=error).pack(fill=tk.X)
-        tk.Button(self.control, text='Quit', command=self.quit).pack(fill=tk.X)
-        
-        return self.control
-        
-    def onresize(self, event):
-        hoff, voff = None, None
-    
-        if not self.initialized:
-            hoff, voff = 200, 100
-            self.initialized = True
-            
-            scale = event.width/100.0
-            self.world.scale((0,0), event.width/100)
+        if event.delta() > 0:
+            scale = 1.2
         else:
-            hoff = self.canvas.width - self.hw.sash_coord(0)[0]
-            voff = self.canvas.height - self.vw.sash_coord(0)[1]
+            scale = 1/1.2
             
-            scale = event.width/float(self.canvas.width)
-            self.world.scale((0,0), event.width/float(self.canvas.width))
+        self.scale(scale, scale)
+        pos = scale*pos - event.pos()
         
-        def place_sash(x, y):
-            self.hw.sash_place(0, x, 1)
-            self.vw.sash_place(0, 1, y)
+        hbar.setValue(pos.x())
+        vbar.setValue(pos.y())
+      
         
-        self.hw.config(width=event.width)
-        self.vw.config(height=event.height)
-        self.after_idle(place_sash, event.width-hoff, event.height-voff)
+class SimControl(QWidget):
+    def __init__(self):
+        super(SimControl, self).__init__()
         
-        self.canvas.width = event.width
-        self.canvas.height = event.height
+        box = QVBoxLayout()
         
-    def onm2down(self, event):
-        self.mx = event.x
-        self.my = event.y
+        hello = QPushButton('Hello')
+        hello.clicked.connect(self.hello)
+        error = QPushButton('Error')
+        error.clicked.connect(self.error)
+        quit = QPushButton('Quit')
+        quit.clicked.connect(self.quit)
         
-    def onm2move(self, event):
-        self.world.move((event.x - self.mx, event.y - self.my))
-        self.mx = event.x
-        self.my = event.y
+        box.addWidget(hello)
+        box.addWidget(error)
+        box.addWidget(quit)
         
-    def onmwheel(self, event):
-        if event.x > self.hw.sash_coord(0)[0] or \
-           event.y > self.vw.sash_coord(0)[1]:
-            return
-        elif event.num == 4 or event.delta > 0:
-            self.world.scale((event.x, event.y), 1.2)
-        elif event.num == 5 or event.delta < 0:
-            self.world.scale((event.x, event.y), 1/1.2)
+        box.setProperty('spacing', 0)
+        box.setProperty('margin', 0)
+        box.addStretch(1)
+        self.setLayout(box)
+        self.resize(150, 0)
         
-    def onstep(self):
-        t = time()
-        dt = t - self.time
-        self.time = t
+    def hello(self):
+        print "Hello World!"
         
-        self.world.step(t)
+    def error(self):
+        raise Error("Error!")
         
-        self.after(SIM_WAIT, self.onstep)
-        self.update_idletasks()
+    def quit(self):
+        QCoreApplication.instance().quit()
         
-        
-        
-        
-        
-# Entry point for the simulator    
 
+class CarNetSim(QWidget):
+    def __init__(self):
+        super(CarNetSim, self).__init__()
+        
+        self.map = Map()
+        
+        box = QHBoxLayout()
+        
+        self.console = SimConsole()
+        self.scene = SimScene(self.map)
+        self.control = SimControl()
+        
+        self.timer = QBasicTimer()
+        self.time = time()
+        
+        sys.stdout = self.console
+        
+        hw = QSplitter(Qt.Horizontal)
+        vw = QSplitter(Qt.Vertical)
+        
+        box.addWidget(hw)
+        hw.addWidget(vw)
+        vw.addWidget(self.scene)
+        vw.addWidget(self.console)
+        hw.addWidget(self.control)
+        
+        hw.setStretchFactor(0, 1)
+        hw.setStretchFactor(1, 0)
+        vw.setStretchFactor(0, 1)
+        vw.setStretchFactor(1, 0)
+        
+        hw.setSizes([800-150, 150])
+        vw.setSizes([600-100, 100])
+        
+        box.setProperty('spacing', 0)
+        box.setProperty('margin', 0)
+        self.setLayout(box)
+        self.setStyleSheet(HANDLE_STYLE)
+        self.setGeometry(50, 50, 800, 600)
+        self.setWindowTitle('Car Network Simulator')
+        
+    def show(self):
+        self.timer.start(1000/60, self)
+        
+        super(CarNetSim, self).show()
+        
+    def timerEvent(self, event):
+        ntime = time()
+        dt = ntime - self.time
+        self.time = ntime
+        
+        self.map.step(dt)
+
+        
 def main():
-    root = tk.Tk()
-    root.geometry("800x600+50+50")
-    sim = CarNetSim(root)
-    root.mainloop()
+    root = QApplication(sys.argv)
+    sim = CarNetSim()
+    sim.show()
+    sys.exit(root.exec_())
     
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
