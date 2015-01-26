@@ -1,5 +1,6 @@
 
 from itertools import *
+from random import random
 import math
 from vmath import *
 from Car import Car
@@ -16,7 +17,7 @@ LINE_WIDTH = 0.125
 
 LINE_BYTES = '\xff\xff\xff\xff\x00\x00\x00\x00'
 LINE_PATTERN = QImage(LINE_BYTES, 1, 2, QImage.Format_ARGB32_Premultiplied)
-                      
+              
 
 # Representation of a single road
 
@@ -62,8 +63,25 @@ class Road:
         self.lanes = lanes
         
         self.graphic = RoadGraphic(start, end, lanes)
+    
+    def step(self, dt):
+        pass
         
+
+# Car entry into system
         
+class Spawner:
+    def __init__(self, map, pos, chance):
+        self.map = map
+        self.pos = pos
+    
+        # probability of a car entering every second
+        self.chance = chance 
+        
+    def step(self, dt):    
+        if random() < dt*self.chance:
+            self.map.add(Car(self.pos))
+
 
 # Representation of all static world elements
 
@@ -82,17 +100,19 @@ class MapGraphic(QGraphicsItem):
 class Map:
     def __init__(self):
         self.graphic = MapGraphic()
-    
-        self.roads = \
-            [Road(vec(0, 0), vec(MAP_WIDTH, MAP_HEIGHT), (2,2)),
-             Road(vec(0, MAP_HEIGHT), vec(MAP_WIDTH, 0), (2,2))]
-            
-        self.cars = \
-            [Car(vec(10,10))]
-            
-        for i in chain(self.roads, self.cars):
-            i.graphic.setParentItem(self.graphic)
+        self.entities = []
+        
+        for i in [Road(vec(0, 0), vec(MAP_WIDTH, MAP_HEIGHT), (2,2)),
+                  Road(vec(0, MAP_HEIGHT), vec(MAP_WIDTH, 0), (2,2)),
+                  Spawner(self, vec(10,10), 0.5)]:
+            self.add(i)
+             
+    def add(self, ent):
+        self.entities.append(ent)
+        
+        if hasattr(ent, 'graphic'):
+            ent.graphic.setParentItem(self.graphic)
              
     def step(self, dt):
-        for c in self.cars:
-            c.step(dt)
+        for i in self.entities:
+            i.step(dt)

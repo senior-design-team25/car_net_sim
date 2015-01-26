@@ -47,6 +47,7 @@ class SimScene(QGraphicsView):
         
         self.scene = QGraphicsScene()
         self.scene.setSceneRect(0, 0, 100, 100)
+        self.scale(self.width()/100.0, self.width()/100.0)
         
         self.scene.addItem(map.graphic)
         
