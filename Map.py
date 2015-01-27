@@ -1,10 +1,10 @@
 
 from itertools import *
 from functools import partial
-from random import random
+from random import *
 import math
 from vmath import *
-from Car import Car
+from Car import Car, CAR_MAX_SPEED, CAR_HEIGHT
 
 from PySide.QtGui import *
 from PySide.QtCore import *
@@ -12,6 +12,11 @@ from PySide.QtCore import *
 
 MAP_WIDTH = 100
 MAP_HEIGHT = 100
+
+SPAWN_CHANCE = 100.0
+
+LOOKAHEAD_TIME = 1.5
+LOOKAHEAD_MIN = CAR_HEIGHT
 
 LANE_WIDTH = 1
 LINE_WIDTH = 0.125
@@ -66,19 +71,27 @@ class Road:
         self.graphic = RoadGraphic(start, end, lanes)
     
     def step(self, dt):
-        return True
+        pass
         
     def target(self, side):
-        def target(self, side, start, end, car):
-            if isnear(car.pos, end):
+        start = self.end if side else self.start
+        end = self.start if side else self.end
+        head = (end - start).norm()
+    
+        def target(car):
+            if head * (car.pos - end) > 0:
                 car.target = self.nt[side]
                 
-            return end
-        
-        if side:
-            return partial(target, self, side, self.end, self.start-vec(10,10))
-        else:
-            return partial(target, self, side, self.start, self.end+vec(10,10))
+            lookahead = LOOKAHEAD_TIME*abs(car.vel*head)
+            lookahead = max(lookahead, LOOKAHEAD_MIN) * head
+            
+            offset = car.lane*LANE_WIDTH + LANE_WIDTH/2.0
+            lstart = start + (offset * ~head)
+            target = projectunit(car.pos - lstart, head) + lstart
+                
+            return target + lookahead
+            
+        return target    
         
 
 # Car entry into system
@@ -92,15 +105,17 @@ class Spawner:
         # probability of a car entering every second
         self.chance = chance 
         
-    def step(self, dt):    
+    def step(self, dt):
+        lane = randint(0, self.lanes[0]-1)
+        
+        offset = lane*LANE_WIDTH + LANE_WIDTH/2.0
+        offset = (offset * ~self.head) + self.pos
+    
         if random() < dt*self.chance:
-            self.map.add(Car(self.nt[0], 0, self.pos, self.head))
+            self.map.add(Car(self.nt[0], lane, offset, self.head, CAR_MAX_SPEED*self.head))
     
     def target(self):
-        def target(self, car):
-            return None
-            
-        return partial(target, self)
+        return lambda car: None
 
 
 # Representation of all static world elements
@@ -123,8 +138,8 @@ class Map:
         self.entities = []
         
         r = Road(vec(0, 0), vec(MAP_WIDTH, MAP_HEIGHT), (2,2))
-        s0 = Spawner(2, vec(0, 0), vec(1,1).norm(), (2,2))
-        s1 = Spawner(2, vec(100, 100), vec(-1,-1).norm(), (2,2))
+        s0 = Spawner(SPAWN_CHANCE, vec(0, 0), vec(1,1).norm(), (2,2))
+        s1 = Spawner(SPAWN_CHANCE, vec(100, 100), vec(-1,-1).norm(), (2,2))
         
         r.nt = s0.target(), s1.target()
         s0.nt = r.target(0),
