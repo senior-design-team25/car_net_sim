@@ -132,7 +132,7 @@ def dist(a, b):
     return (b-a).len()
     
 def isnear(a, b):
-    return abs(distsq(a, b)) < EPS
+    return (b-a).iszero()
     
 def angle(a, b):
     return -math.atan2(~a * b, a * b)

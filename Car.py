@@ -46,7 +46,8 @@ class CarGraphic(QGraphicsItem):
 # Representation of a car
 
 class Car:
-    def __init__(self, pos, head=vec(0,0), vel=0):
+    def __init__(self, target, lane, pos, head=vec(0,0), vel=0):
+        self.target = target
         self.pos = pos
         self.head = head
         self.vel = vel
@@ -54,7 +55,12 @@ class Car:
         self.graphic = CarGraphic(pos, head)
             
     def step(self, dt):
-        dir = vec(50,50) - self.pos # TODO use "driver" input to determine steering
+        target = self.target(self)
+        
+        if target is None:
+            self.map.remove(self)
+        
+        dir = target - self.pos # TODO use "driver" input to determine steering
         force = CAR_MASS/dt * (dir-self.vel)
         
         if force.lensq() > CAR_MAX_FORCE**2:
