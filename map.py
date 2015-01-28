@@ -4,7 +4,7 @@ from random import *
 import math
 from vmath import *
 from config import global_config as config
-from Car import Car, CAR_HEIGHT
+from car import Car, CAR_HEIGHT
 
 from PySide.QtGui import *
 from PySide.QtCore import *

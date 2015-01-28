@@ -3,7 +3,7 @@ import io
 from time import time
 
 from vmath import *
-from Map import Map
+from map import Map
 
 from PySide.QtGui import *
 from PySide.QtCore import *
