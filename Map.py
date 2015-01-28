@@ -1,10 +1,10 @@
 
 from itertools import *
-from functools import partial
 from random import *
 import math
 from vmath import *
-from Car import Car, CAR_MAX_SPEED, CAR_HEIGHT
+from config import global_config as config
+from Car import Car, CAR_HEIGHT
 
 from PySide.QtGui import *
 from PySide.QtCore import *
@@ -12,8 +12,6 @@ from PySide.QtCore import *
 
 MAP_WIDTH = 100
 MAP_HEIGHT = 100
-
-SPAWN_CHANCE = 100.0
 
 LOOKAHEAD_TIME = 1.5
 LOOKAHEAD_MIN = CAR_HEIGHT
@@ -97,13 +95,12 @@ class Road:
 # Car entry into system
         
 class Spawner:
-    def __init__(self, chance, pos, head, lanes):
+    def __init__(self, pos, head, lanes):
         self.pos = pos
         self.head = head
         self.lanes = lanes
-    
-        # probability of a car entering every second
-        self.chance = chance 
+        
+        config.use('SPAWN_CHANCE', 10.0, self, 'spawn_chance', float)
         
     def step(self, dt):
         lane = randint(0, self.lanes[0]-1)
@@ -111,8 +108,8 @@ class Spawner:
         offset = lane*LANE_WIDTH + LANE_WIDTH/2.0
         offset = (offset * ~self.head) + self.pos
     
-        if random() < dt*self.chance:
-            self.map.add(Car(self.nt[0], lane, offset, self.head, CAR_MAX_SPEED*self.head))
+        if random() < dt*self.spawn_chance:
+            self.map.add(Car(self.nt[0], lane, offset, self.head))
     
     def target(self):
         return lambda car: None
@@ -138,8 +135,8 @@ class Map:
         self.entities = []
         
         r = Road(vec(0, 0), vec(MAP_WIDTH, MAP_HEIGHT), (2,2))
-        s0 = Spawner(SPAWN_CHANCE, vec(0, 0), vec(1,1).norm(), (2,2))
-        s1 = Spawner(SPAWN_CHANCE, vec(100, 100), vec(-1,-1).norm(), (2,2))
+        s0 = Spawner(vec(0, 0), vec(1,1).norm(), (2,2))
+        s1 = Spawner(vec(100, 100), vec(-1,-1).norm(), (2,2))
         
         r.nt = s0.target(), s1.target()
         s0.nt = r.target(0),

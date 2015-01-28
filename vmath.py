@@ -1,14 +1,9 @@
 
 import math
-import collections
 
 
 # Epsilon for nearby comparisons
-EPS = 0.0001
-
-# Helper function for iteration check
-def isiter(t):
-    return isinstance(t, collections.Sequence)                       
+EPS = 0.0001                     
                        
                  
 # Definition of a simple vector type
@@ -56,19 +51,19 @@ class vec(tuple):
         
         
     def __add__((ax,ay), b):
-        if isiter(b):
+        if isinstance(b, vec):
             return vec(ax+b[0], ay+b[1])
         else:
             return vec(ax+b, ay+b)
     
     def __sub__((ax,ay), b):
-        if isiter(b):
+        if isinstance(b, vec):
             return vec(ax-b[0], ay-b[1])
         else:
             return vec(ax-b, ay-b)
             
     def __mul__(a, b):
-        if isiter(b):
+        if isinstance(b, vec):
             return a.dot(b)
         else:
             return a.scale(b)
@@ -140,7 +135,7 @@ def angle(a, b):
 def projectunit(a, b):
     return (a*b)*b
     
-def project(a, (bx,by)):
+def project(a, b):
     return b.scale(a*b / b.lensq())
     
 def lerp(a, b, r):

@@ -1,6 +1,7 @@
 
 from vmath import *
 import math
+from config import global_config as config
 
 from PySide.QtGui import *
 from PySide.QtCore import *
@@ -9,11 +10,6 @@ from PySide.QtCore import *
 CAR_WIDTH = 1.0
 CAR_HEIGHT = 2.0
 LINE_WIDTH = 0.125
-
-CAR_MASS = 100
-CAR_MAX_FORCE = 2000
-CAR_MAX_SPIN = 1
-CAR_MAX_SPEED = 35
 
 
 class CarGraphic(QGraphicsItem):
@@ -46,44 +42,49 @@ class CarGraphic(QGraphicsItem):
 # Representation of a car
 
 class Car:
-    def __init__(self, target, lane, pos, head=vec(0,0), vel=vec(0,0)):
+    def __init__(self, target, lane, pos, head=vec(0,0), vel=None):
+        config.use('CAR_MASS', 100, self, 'mass', float)
+        config.use('CAR_MAX_FORCE', 2000, self, 'max_force', float)
+        config.use('CAR_MAX_SPIN', 1, self, 'max_spin', float)
+        config.use('CAR_MAX_SPEED', 35, self, 'max_speed', float)
+    
         self.target = target
         self.lane = lane
         self.pos = pos
         self.head = head
-        self.vel = vel
+        self.vel = vel or self.max_speed*head
         
         self.graphic = CarGraphic(pos, self.head)
             
-    def step(self, dt):
+    def step(self, dt):    
         target = self.target(self)
         
         if not target:
             self.map.remove(self)
             return
         
-        dir = target - self.pos # TODO use "driver" input to determine steering    
-        force = CAR_MASS/dt * (dir-self.vel)
+        dir = target - self.pos
+        force = self.mass/dt * (dir-self.vel)
         
-        if force.lensq() > CAR_MAX_FORCE**2:
-            force = CAR_MAX_FORCE*force.norm()
+        if force.lensq() > self.max_force**2:
+            force = self.max_force*force.norm()
             
-        vel = self.vel + (dt/CAR_MASS)*force
+        vel = self.vel + (dt/self.mass)*force
         spin = angle(vel, self.head)
         
         if vel.iszero():
             head = self.head
-        elif spin > CAR_MAX_SPIN*dt:
-            head = self.head.rotate(CAR_MAX_SPIN*dt)
+        elif spin > self.max_spin*dt:
+            head = self.head.rotate(self.max_spin*dt)
             vel = projectunit(vel, head)
-        elif spin < -CAR_MAX_SPIN*dt:
-            head = self.head.rotate(-CAR_MAX_SPIN*dt)
+        elif spin < -self.max_spin*dt:
+            head = self.head.rotate(-self.max_spin*dt)
             vel = projectunit(vel, head)
         else:
             head = vel.norm()
             
-        if vel.lensq() > CAR_MAX_SPEED**2:
-            vel = CAR_MAX_SPEED*vel.norm()
+        if vel.lensq() > self.max_speed**2:
+            vel = self.max_speed*vel.norm()
             
         self.vel = vel
         self.head = head
