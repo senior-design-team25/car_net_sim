@@ -1,7 +1,9 @@
 import sys
 import io
 from time import time
+from functools import partial
 
+from config import global_config as config
 from vmath import *
 from map import Map
 
@@ -108,6 +110,16 @@ class SimControl(QWidget):
         box.addWidget(hello)
         box.addWidget(error)
         box.addWidget(quit)
+        
+        def config_mod(key, input):
+            config.eval(key, input.text())
+        
+        for key in config:
+            label = QLabel(key)
+            box.addWidget(label)
+            input = QLineEdit(repr(config[key]))
+            input.returnPressed.connect(partial(config_mod, key, input))
+            box.addWidget(input)
         
         box.setProperty('spacing', 0)
         box.setProperty('margin', 0)

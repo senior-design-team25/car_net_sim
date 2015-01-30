@@ -25,8 +25,7 @@ class Config(object):
                         raise SyntaxError()
                         
                     key, value = m.groups()
-                    
-                    self[key] = eval(value, globals())
+                    self.eval(key, value)
             
     def dump(self):
         with open(self.file, 'w') as file:
@@ -36,19 +35,18 @@ class Config(object):
                 file.write(repr(self[key]))
                 file.write('\n')
             
-    def use(self, key, default=0, target=None, attr=None, type=lambda x: x, cb=None):
+    def use(self, key, default=0.0, target=None, attr=None, cast=None, cb=None):
         if key not in self.config:
             self.config[key] = default
             self.cbs[key] = weakref.WeakKeyDictionary()
         
-        print len(self.cbs[key])
-        
         target = target or self
+        cast = cast or type(default)
         ref = weakref.ref(target)
         
         if attr is not None:
             def assign(v):
-                setattr(ref(), attr, type(v))
+                setattr(ref(), attr, cast(v))
         
             self.use(key, target=target, cb=assign)
             
@@ -63,6 +61,9 @@ class Config(object):
         for cbs in self.cbs[key].values():
             for cb in cbs:
                 cb(self.config[key])
+                
+    def eval(self, key, string):
+        self[key] = eval(string, globals())
             
     def __getitem__(self, key):
         return self.config[key]

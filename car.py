@@ -7,11 +7,6 @@ from PySide.QtGui import *
 from PySide.QtCore import *
 
 
-CAR_WIDTH = 1.0
-CAR_HEIGHT = 2.0
-LINE_WIDTH = 0.125
-
-
 class CarGraphic(QGraphicsItem):
     def __init__(self, pos, head):
         super(CarGraphic, self).__init__()
@@ -22,31 +17,37 @@ class CarGraphic(QGraphicsItem):
         self.setRotation(math.degrees(angle(head, vec(0,1))))
 
     def boundingRect(self):
-        return QRectF(-CAR_WIDTH/2, -CAR_HEIGHT/2, CAR_WIDTH, CAR_HEIGHT)
+        return QRectF(-Car.WIDTH/2, -Car.HEIGHT/2, Car.WIDTH, Car.HEIGHT)
      
     def paint(self, painter, option, widget):
         painter.setPen(Qt.NoPen)
         painter.setBrush(Qt.black)
-        painter.drawRect(QRectF(-CAR_WIDTH/2, -CAR_HEIGHT/2, CAR_WIDTH, CAR_HEIGHT))
+        painter.drawRect(QRectF(-Car.WIDTH/2, -Car.HEIGHT/2, Car.WIDTH, Car.HEIGHT))
         painter.setBrush(Qt.yellow)
-        painter.drawRect(QRectF(-CAR_WIDTH/2+LINE_WIDTH, -CAR_HEIGHT/2+LINE_WIDTH, 
-                                CAR_WIDTH-2*LINE_WIDTH, CAR_HEIGHT-2*LINE_WIDTH))
+        painter.drawRect(QRectF(-Car.WIDTH/2+CarGraphic.LINE, -Car.HEIGHT/2+CarGraphic.LINE, 
+                                Car.WIDTH-2*CarGraphic.LINE, Car.HEIGHT-2*CarGraphic.LINE))
         
         painter.setBrush(Qt.black)
-        painter.drawRect(QRectF(-CAR_WIDTH/2+LINE_WIDTH, -CAR_HEIGHT/4, 
-                                CAR_WIDTH-2*LINE_WIDTH, 0.375*CAR_HEIGHT))
+        painter.drawRect(QRectF(-Car.WIDTH/2+CarGraphic.LINE, -Car.HEIGHT/4, 
+                                Car.WIDTH-2*CarGraphic.LINE, 0.375*Car.HEIGHT))
         painter.setBrush(Qt.yellow)
-        painter.drawRect(QRectF(-CAR_WIDTH/2+LINE_WIDTH, -CAR_HEIGHT/4+LINE_WIDTH, 
-                                CAR_WIDTH-2*LINE_WIDTH, 0.375*CAR_HEIGHT-2*LINE_WIDTH))
+        painter.drawRect(QRectF(-Car.WIDTH/2+CarGraphic.LINE, -Car.HEIGHT/4+CarGraphic.LINE, 
+                                Car.WIDTH-2*CarGraphic.LINE, 0.375*Car.HEIGHT-2*CarGraphic.LINE))
+                                
+config.use('LINE_WIDTH', 0.125, CarGraphic, 'LINE', float)
+
         
 # Representation of a car
 
 class Car:
     def __init__(self, target, lane, pos, head=vec(0,0), vel=None):
-        config.use('CAR_MASS', 100, self, 'mass', float)
-        config.use('CAR_MAX_FORCE', 2000, self, 'max_force', float)
-        config.use('CAR_MAX_SPIN', 1, self, 'max_spin', float)
-        config.use('CAR_MAX_SPEED', 35, self, 'max_speed', float)
+        config.use('CAR_MASS', 100.0, self, 'mass')
+        config.use('CAR_MAX_FORCE', 2000.0, self, 'max_force')
+        config.use('CAR_MAX_SPIN', 1.0, self, 'max_spin')
+        config.use('CAR_MAX_SPEED', 35.0, self, 'max_speed')
+        
+        config.use('LOOKAHEAD_TIME', 1.5, self, 'lookahead_time')
+        config.use('LOOKAHEAD_MIN', self.HEIGHT, self, 'lookahead_min')
     
         self.target = target
         self.lane = lane
@@ -92,3 +93,7 @@ class Car:
         
         self.graphic.set(self.pos, self.head)
         
+config.use('CAR_WIDTH', 1.0, Car, 'WIDTH')
+config.use('CAR_HEIGHT', 2.0, Car, 'HEIGHT')
+
+
