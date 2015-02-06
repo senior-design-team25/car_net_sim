@@ -136,6 +136,7 @@ class Map:
     def __init__(self):
         self.graphic = MapGraphic()
         self.entities = []
+        self.vehicles = []
         
         r = Road(vec(0, 0), vec(Map.WIDTH, Map.HEIGHT), (2,2))
         s0 = Spawner(vec(0, 0), vec(1,1).norm(), (2,2))
@@ -153,18 +154,26 @@ class Map:
     def add(self, entry):
         entry.map = self
     
-        self.entities.append(entry)
+        if isinstance(entry, Car):
+            self.vehicles.append(entry)
+        else:
+            self.entities.append(entry)
         
         if hasattr(entry, 'graphic'):
             entry.graphic.setParentItem(self.graphic)
             
     def remove(self, entry):
-        self.entities.remove(entry)
+        try:
+            self.vehicles.remove(entry)
+        except:
+            self.entities.remove(entry)
         
         if hasattr(entry, 'graphic'):
             entry.graphic.setParentItem(None)
              
     def step(self, dt):
+        for i in self.vehicles:
+            i.step(dt)
         for i in self.entities:
             i.step(dt)
     

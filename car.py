@@ -56,17 +56,36 @@ class Car:
         self.vel = vel or self.max_speed*head
         
         self.graphic = CarGraphic(pos, self.head)
+        
+    def stopdist(self):
+        return 0.5*self.mass*(self.max_speed**2) / self.max_force
             
     def step(self, dt):    
+        # Find target force
         target = self.target(self)
         
         if not target:
             self.map.remove(self)
             return
         
-        dir = target - self.pos
-        force = self.mass/dt * (dir-self.vel)
+        targetv = self.max_speed * (target - self.pos).norm()
         
+        # Find collision avoiding forces
+        sdsq = self.stopdist()**2
+        
+        for c in self.map.vehicles:
+            if c == self:
+                continue
+        
+            cdiff = c.pos - self.pos
+            
+            if cdiff.lensq() < sdsq and abs(angle(cdiff, self.head)) < 0.1:
+                targetv *= cdiff.len() / math.sqrt(sdsq)
+        
+        # Find total driving force
+        force = self.mass/dt * (targetv-self.vel)
+        
+        # Simulate actual driving
         if force.lensq() > self.max_force**2:
             force = self.max_force*force.norm()
             

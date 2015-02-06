@@ -111,14 +111,20 @@ class SimControl(QWidget):
         box.addWidget(error)
         box.addWidget(quit)
         
-        def config_mod(key, input):
-            config.eval(key, input.text())
+        cbox = QHBoxLayout()
+        load = QPushButton('Load')
+        load.clicked.connect(config.load)
+        cbox.addWidget(load)
+        save = QPushButton('Save')
+        save.clicked.connect(config.dump)
+        cbox.addWidget(save)
+        box.addLayout(cbox)
         
         for key in config:
             label = QLabel(key)
             box.addWidget(label)
             input = QLineEdit(repr(config[key]))
-            input.returnPressed.connect(partial(config_mod, key, input))
+            input.returnPressed.connect(partial(self.mod, key, input))
             box.addWidget(input)
         
         box.setProperty('spacing', 0)
@@ -126,6 +132,9 @@ class SimControl(QWidget):
         box.addStretch(1)
         self.setLayout(box)
         self.resize(150, 0)
+        
+    def mod(self, key, input):
+        config.eval(key, input.text())
         
     def hello(self):
         print "Hello World!"
