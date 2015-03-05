@@ -64,6 +64,7 @@ class Car:
         self.pos = pos
         self.head = head
         self.vel = vel
+        self.accel = vec(0,0)
         self.dead = False
         
         self.messages = queue()
@@ -106,11 +107,14 @@ class Car:
     def collisions(self):
         return [v for v in self.nbors(2*self.radius())
                 if self.graphic.collidesWithItem(v.graphic)]
+                
+    # Get car's current time
+    def time(self):
+        return self.map.time
         
     # Sends a message to this car
     def send(self, message, delay=0):
-        time = self.map.time + delay
-        self.messages.push((self.map.time + delay, message))
+        self.messages.push((self.time() + delay, message))
         
     # Obtains all pending messages
     def pending(self):
@@ -119,7 +123,7 @@ class Car:
         while True:
             next = self.messages.peak()
         
-            if next and next[0] < self.map.time:
+            if next and next[0] < self.time():
                 pending.append(self.messages.pop())
             else:
                 break
@@ -153,7 +157,8 @@ class Car:
         nbors = drivers[self.driver](self)
         
         fnbors = [d for d in nbors
-                  if d * self.head > 0 and
+                  if d < stopdist and
+                     d * self.head > 0 and
                      projectunit(d, ~self.head) < Car.WIDTH]
                   
         if hasattr(target, 'lanes') and fnbors:
@@ -189,8 +194,9 @@ class Car:
         # Simulate physical driving
         if force > self.max_force:
             force = self.max_force*force.norm()
-            
-        vel = self.vel + (force*dt)/self.mass
+           
+        accel = force / self.mass
+        vel = self.vel + dt*accel
         spin = angle(vel, self.head)
         
         if vel.lensq() == 0:
@@ -206,8 +212,10 @@ class Car:
             
         if vel > self.max_speed:
             vel = self.max_speed*vel.norm()
+            accel = 0
             
         self.vel = vel
+        self.accel = accel
         self.head = head
         self.pos += dt*vel
         
