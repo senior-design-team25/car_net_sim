@@ -140,6 +140,7 @@ class MapGraphic(QGraphicsItem):
 class Map:
     def __init__(self):
         self.graphic = MapGraphic()
+        self.time = 0
         self.entities = []
         self.vehicles = []
         
@@ -181,8 +182,11 @@ class Map:
     def step(self, dt):
         for i in self.vehicles:
             i.step(dt)
+            
         for i in self.entities:
             i.step(dt)
+            
+        self.time += dt
     
 config.use('MAP_WIDTH', 100, Map, 'WIDTH', int)
 config.use('MAP_HEIGHT', 100, Map, 'HEIGHT', int)

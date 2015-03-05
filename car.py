@@ -2,8 +2,8 @@
 from vmath import *
 import math
 from random import random
+from queue import queue
 from config import global_config as config
-#from queue import queue
 
 from PySide.QtGui import *
 from PySide.QtCore import *
@@ -60,6 +60,8 @@ class Car:
         self.head = head
         self.vel = vel
         
+        self.messages = queue()
+        
         self.graphic = CarGraphic(pos, self.head)
         
     # predicted distance to complete stop from current velocity
@@ -77,10 +79,38 @@ class Car:
     def nbors(self, dist):
         return [c for c in self.map.vehicles
                 if c != self and c.pos - self.pos < dist]
+        
+    # Sends a message to this car
+    def send(self, message, delay=0):
+        time = self.map.time + delay
+        self.messages.push((self.map.time + delay, message))
+        
+    # Obtains all pending messages
+    def pending(self):
+        pending = []
+        
+        while True:
+            next = self.messages.peak()
+        
+            if next and next[0] < self.map.time:
+                pending.append(self.messages.pop())
+            else:
+                break
+                
+        return pending
+        
+    # Obtains the most recent message
+    def recent(self):
+        pending = self.pending()
+        
+        return max(pending)[1] if pending else None
                 
     # determine nearby cars
     def control(self):
-        return [(c, c.pos - self.pos) for c in self.nbors(self.stopdist())]
+        nbors = [c.pos - self.pos for c in self.nbors(self.stopdist())]
+        self.send(nbors, self.reaction_time)
+        
+        return self.recent() or []
         
     # Calculate wanted driving forces        
     def drive(self, dt):
@@ -99,27 +129,27 @@ class Car:
         
         nbors = self.control()
         
-        fnbors = [(c,d) for c,d in nbors
+        fnbors = [d for d in nbors
                   if d * self.head > 0 and
                      projectunit(d, ~self.head) < Car.WIDTH]
                   
         if fnbors:
-            fd = min(d*self.head for _,d in fnbors)
+            fd = min(d*self.head for d in fnbors)
             v *= max((fd - Car.HEIGHT) / stopdist, 0)
             
             # Decide if we want to change lanes
             if random() < dt*self.lane_change_chance and \
                projectunit(t-self.pos, ~target.head) < Car.WIDTH/4:
-                rnbors = [(c,d) for c,d in nbors
+                rnbors = [d for d in nbors
                           if d * ~target.head > 0 and
                              projectunit(d, ~target.head) < 2*target.width]
                         
-                lnbors = [(c,d) for c,d in nbors
+                lnbors = [d for d in nbors
                           if d * ~target.head < 0 and
                              projectunit(d, ~target.head) < 2*target.width]
                       
-                rd = min(d*target.head for _,d in rnbors) if rnbors else vec(1e309,1e309)
-                ld = min(d*target.head for _,d in lnbors) if lnbors else vec(1e309,1e309)
+                rd = min(d*target.head for d in rnbors) if rnbors else vec(1e309,1e309)
+                ld = min(d*target.head for d in lnbors) if lnbors else vec(1e309,1e309)
                 
                 if rd/3 > fd and self.lane < target.lanes-1:
                         self.lane += 1
