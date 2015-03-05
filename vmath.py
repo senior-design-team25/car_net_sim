@@ -1,9 +1,5 @@
 
-import math
-
-
-# Epsilon for nearby comparisons
-EPS = 0.0001                     
+import math                  
                        
                  
 # Definition of a simple vector type
@@ -142,9 +138,6 @@ def distsq(a, b):
 
 def dist(a, b):
     return (b-a).len()
-    
-def isnear(a, b):
-    return (b-a).iszero()
     
 def angle(a, b):
     return -math.atan2(~a * b, a * b)

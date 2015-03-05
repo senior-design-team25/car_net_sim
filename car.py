@@ -5,6 +5,7 @@ from itertools import *
 from random import random
 from queue import queue
 from config import global_config as config
+from drivers import drivers
 
 from PySide.QtGui import *
 from PySide.QtCore import *
@@ -55,6 +56,8 @@ class Car:
         config.use('REACTION_TIME', 1.0, self, 'reaction_time')
         config.use('REMOVAL_DELAY', 1.0, self, 'removal_delay')
         config.use('LANE_CHANGE_CHANCE', 1.0, self, 'lane_change_chance')
+        
+        config.use('DRIVER', 'god', self, 'driver')
         
         self.target = target
         self.lane = lane
@@ -128,13 +131,6 @@ class Car:
         pending = self.pending()
         
         return max(pending)[1] if pending else None
-                
-    # determine nearby cars
-    def control(self):
-        nbors = [c.pos - self.pos for c in self.nbors(self.stopdist())]
-        self.send(nbors, self.reaction_time)
-        
-        return self.recent() or []
         
     # Calculate wanted driving forces        
     def drive(self, dt):
@@ -154,7 +150,7 @@ class Car:
         # Find collision avoiding forces
         stopdist = self.stopdist()
         
-        nbors = self.control()
+        nbors = drivers[self.driver](self)
         
         fnbors = [d for d in nbors
                   if d * self.head > 0 and
