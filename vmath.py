@@ -84,6 +84,26 @@ class vec(tuple):
         return vec(ax**b, ay**b)
         
         
+    # Relationships
+    def __lt__(a, b):
+        if isinstance(b, vec):
+            return a.lensq() < b.lensq()
+        else:
+            return a.lensq() < b**2
+            
+    def __gt__(a, b):
+        if isinstance(b, vec):
+            return a.lensq() > b.lensq()
+        else:
+            return a.lensq() > b**2
+            
+    def __le__(a, b):
+        return not a > b
+        
+    def __ge__(a, b):
+        return not a < b
+        
+        
     # Aliases
     __div__ = __truediv__
     

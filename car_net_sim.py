@@ -95,21 +95,16 @@ class SimScene(QGraphicsView):
       
         
 class SimControl(QWidget):
-    def __init__(self):
+    def __init__(self, map):
         super(SimControl, self).__init__()
+        self.map = map
         
         box = QVBoxLayout()
         
-        hello = QPushButton('Hello')
-        hello.clicked.connect(self.hello)
-        error = QPushButton('Error')
-        error.clicked.connect(self.error)
-        quit = QPushButton('Quit')
-        quit.clicked.connect(self.quit)
+        reset = QPushButton('Reset')
+        reset.clicked.connect(self.reset)
         
-        box.addWidget(hello)
-        box.addWidget(error)
-        box.addWidget(quit)
+        box.addWidget(reset)
         
         cbox = QHBoxLayout()
         load = QPushButton('Load')
@@ -136,14 +131,9 @@ class SimControl(QWidget):
     def mod(self, key, input):
         config.eval(key, input.text())
         
-    def hello(self):
-        print "Hello World!"
-        
-    def error(self):
-        raise Error("Error!")
-        
-    def quit(self):
-        QCoreApplication.instance().quit()
+    def reset(self):
+        for c in list(self.map.vehicles):
+            self.map.remove(c)
         
 
 class CarNetSim(QWidget):
@@ -156,7 +146,7 @@ class CarNetSim(QWidget):
         
         self.console = SimConsole()
         self.scene = SimScene(self.map)
-        self.control = SimControl()
+        self.control = SimControl(self.map)
         
         self.timer = QBasicTimer()
         self.time = time()
@@ -197,7 +187,7 @@ class CarNetSim(QWidget):
         dt = ntime - self.time
         self.time = ntime
         
-        self.map.step(dt)
+        self.map.step(1.0/(60.0))
 
         
 def main():

@@ -1,6 +1,7 @@
 
 from vmath import *
 import math
+from random import random
 from config import global_config as config
 
 from PySide.QtGui import *
@@ -40,7 +41,7 @@ config.use('LINE_WIDTH', 0.125, CarGraphic, 'LINE', float)
 # Representation of a car
 
 class Car:
-    def __init__(self, target, lane, pos, head=vec(0,0), vel=None):
+    def __init__(self, target, lane, pos, head=vec(0,0), vel=vec(0,0)):
         config.use('CAR_MASS', 100.0, self, 'mass')
         config.use('CAR_MAX_FORCE', 2000.0, self, 'max_force')
         config.use('CAR_MAX_SPIN', 1.0, self, 'max_spin')
@@ -48,17 +49,28 @@ class Car:
         
         config.use('LOOKAHEAD_TIME', 1.5, self, 'lookahead_time')
         config.use('LOOKAHEAD_MIN', self.HEIGHT, self, 'lookahead_min')
+        
+        config.use('REACTION_TIME', 1, self, 'reaction_time')
+        config.use('LANE_CHANGE_CHANCE', 1, self, 'lane_change_chance')
     
         self.target = target
         self.lane = lane
         self.pos = pos
         self.head = head
-        self.vel = vel or self.max_speed*head
+        self.vel = vel
         
         self.graphic = CarGraphic(pos, self.head)
         
     def stopdist(self):
-        return 0.5*self.mass*(self.max_speed**2) / self.max_force
+        s = self.vel.len()
+        t = self.reaction_time + (s * self.mass)/self.max_force
+        d = s*t - (self.max_force * t**2) / (2*self.mass)
+        return d + Car.HEIGHT
+    
+        #return 0.5*self.mass*(self.max_speed**2) / self.max_force
+        
+    def radius(self):
+        return math.sqrt((Car.WIDTH/2)**2 + (Car.HEIGHT/2)**2)
             
     def step(self, dt):    
         # Find target force
@@ -71,16 +83,37 @@ class Car:
         targetv = self.max_speed * (target - self.pos).norm()
         
         # Find collision avoiding forces
-        sdsq = self.stopdist()**2
+        stopdist = self.stopdist()
         
-        for c in self.map.vehicles:
-            if c == self:
-                continue
+        nbors = [(c, c.pos - self.pos) for c in self.map.vehicles
+                 if c.pos - self.pos < stopdist and c != self]
         
-            cdiff = c.pos - self.pos
+        fnbors = [(c,d) for c,d in nbors
+                  if projectunit(d, ~self.head) < Car.WIDTH
+                     and d * self.head > 0]
+                  
+        if fnbors:
+            fd = min(d*self.head for _,d in fnbors)
+            targetv *= max((fd - Car.HEIGHT) / stopdist, 0)
             
-            if cdiff.lensq() < sdsq and abs(angle(cdiff, self.head)) < 0.1:
-                targetv *= cdiff.len() / math.sqrt(sdsq)
+            if random() < dt*self.lane_change_chance:
+                rnbors = [(c,d) for c,d in nbors
+                          if projectunit(d, ~self.head) < 2*self.target.width
+                          if d * ~self.head > 0]
+                        
+                lnbors = [(c,d) for c,d in nbors
+                          if projectunit(d, ~self.head) < 2*self.target.width
+                          if d * ~self.head < 0]
+                      
+                rd = min(d*self.head for _,d in rnbors) if rnbors else vec(1e309,1e309)
+                ld = min(d*self.head for _,d in lnbors) if lnbors else vec(1e309,1e309)
+                
+                if rd > ld:
+                    if rd > fd and self.lane < self.target.lanes-1:
+                        self.lane += 1
+                else:
+                    if ld > fd and self.lane > 0:
+                        self.lane -= 1
         
         # Find total driving force
         force = self.mass/dt * (targetv-self.vel)
@@ -89,7 +122,7 @@ class Car:
         if force.lensq() > self.max_force**2:
             force = self.max_force*force.norm()
             
-        vel = self.vel + (dt/self.mass)*force
+        vel = self.vel + (force*dt)/self.mass
         spin = angle(vel, self.head)
         
         if vel.iszero():

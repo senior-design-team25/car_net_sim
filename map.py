@@ -80,6 +80,7 @@ class Road:
         def target(car):
             if head * (car.pos - end) > 0:
                 car.target = self.nt[side]
+                return car.target(car)
                 
             lookahead = car.lookahead_time*abs(car.vel*head)
             lookahead = max(lookahead, car.lookahead_min) * head
@@ -89,6 +90,9 @@ class Road:
             target = projectunit(car.pos - lstart, head) + lstart
                 
             return target + lookahead
+            
+        target.lanes = self.lanes[side]
+        target.width = Road.LANE
             
         return target 
 
@@ -103,7 +107,7 @@ class Spawner:
         self.head = head
         self.lanes = lanes
         
-        config.use('SPAWN_CHANCE', 10.0, self, 'spawn_chance', float)
+        config.use('SPAWN_CHANCE', 10.0, self, 'spawn_chance')
         
     def step(self, dt):
         lane = randint(0, self.lanes[0]-1)
@@ -138,9 +142,12 @@ class Map:
         self.entities = []
         self.vehicles = []
         
-        r = Road(vec(0, 0), vec(Map.WIDTH, Map.HEIGHT), (2,2))
-        s0 = Spawner(vec(0, 0), vec(1,1).norm(), (2,2))
-        s1 = Spawner(vec(100, 100), vec(-1,-1).norm(), (2,2))
+        #r = Road(vec(0, 0), vec(Map.WIDTH, Map.HEIGHT), (2,2))
+        #s0 = Spawner(vec(0, 0), vec(1,1).norm(), (2,2))
+        #s1 = Spawner(vec(100, 100), vec(-1,-1).norm(), (2,2))
+        r = Road(vec(0, 50), vec(100, 50), (4,4))
+        s0 = Spawner(vec(0, 50), vec(1,0).norm(), (4,4))
+        s1 = Spawner(vec(100, 50), vec(-1,0).norm(), (4,4))
         
         r.nt = s0.target(), s1.target()
         s0.nt = r.target(0),
@@ -149,7 +156,6 @@ class Map:
         self.add(r)
         self.add(s0)
         self.add(s1)
-        
              
     def add(self, entry):
         entry.map = self
