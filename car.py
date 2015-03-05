@@ -212,7 +212,7 @@ class Car:
             
         if vel > self.max_speed:
             vel = self.max_speed*vel.norm()
-            accel = 0
+            accel = vec(0,0)
             
         self.vel = vel
         self.accel = accel

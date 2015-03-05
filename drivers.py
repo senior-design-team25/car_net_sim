@@ -10,7 +10,7 @@ def human(car):
     
     recent = car.recent()
     if recent:
-        return [d + (car.time()-t)*v + ((car.time()-t)**2) * a/2 for d,v,a,t in recent]
+        return [d + (car.time()-t)*v + ((car.time()-t)**2)*a/2 for d,v,a,t in recent]
     else:
         return []
 
