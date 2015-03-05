@@ -3,6 +3,7 @@ from vmath import *
 import math
 from random import random
 from config import global_config as config
+#from queue import queue
 
 from PySide.QtGui import *
 from PySide.QtCore import *
@@ -61,37 +62,46 @@ class Car:
         
         self.graphic = CarGraphic(pos, self.head)
         
+    # predicted distance to complete stop from current velocity
     def stopdist(self):
         s = self.vel.len()
-        t = self.reaction_time + (s * self.mass)/self.max_force
+        t = (s * self.mass)/self.max_force
         d = s*t - (self.max_force * t**2) / (2*self.mass)
-        return d + Car.HEIGHT
-    
-        #return 0.5*self.mass*(self.max_speed**2) / self.max_force
+        return d + Car.HEIGHT + t*self.reaction_time
         
+    # Estimated radius of car
     def radius(self):
         return math.sqrt((Car.WIDTH/2)**2 + (Car.HEIGHT/2)**2)
-            
-    def step(self, dt):    
+        
+    # Finds neighbors within distance of car
+    def nbors(self, dist):
+        return [c for c in self.map.vehicles
+                if c != self and c.pos - self.pos < dist]
+                
+    # determine nearby cars
+    def control(self):
+        return [(c, c.pos - self.pos) for c in self.nbors(self.stopdist())]
+        
+    # Calculate wanted driving forces        
+    def drive(self, dt):
         # Find target force
         target = self.target
         t = target(self)
         
         if not t:
             self.map.remove(self)
-            return
+            return vec(0,0)
         
         v = self.max_speed * (t - self.pos).norm()
         
         # Find collision avoiding forces
         stopdist = self.stopdist()
         
-        nbors = [(c, c.pos - self.pos) for c in self.map.vehicles
-                 if c.pos - self.pos < stopdist and c != self]
+        nbors = self.control()
         
         fnbors = [(c,d) for c,d in nbors
-                  if projectunit(d, ~self.head) < Car.WIDTH and
-                     d * self.head > 0]
+                  if d * self.head > 0 and
+                     projectunit(d, ~self.head) < Car.WIDTH]
                   
         if fnbors:
             fd = min(d*self.head for _,d in fnbors)
@@ -101,12 +111,12 @@ class Car:
             if random() < dt*self.lane_change_chance and \
                projectunit(t-self.pos, ~target.head) < Car.WIDTH/4:
                 rnbors = [(c,d) for c,d in nbors
-                          if projectunit(d, ~target.head) < 2*target.width and
-                             d * ~target.head > 0]
+                          if d * ~target.head > 0 and
+                             projectunit(d, ~target.head) < 2*target.width]
                         
                 lnbors = [(c,d) for c,d in nbors
-                          if projectunit(d, ~target.head) < 2*target.width and
-                             d * ~target.head < 0]
+                          if d * ~target.head < 0 and
+                             projectunit(d, ~target.head) < 2*target.width]
                       
                 rd = min(d*target.head for _,d in rnbors) if rnbors else vec(1e309,1e309)
                 ld = min(d*target.head for _,d in lnbors) if lnbors else vec(1e309,1e309)
@@ -116,17 +126,21 @@ class Car:
                 elif ld/3 > fd and self.lane > 0:
                         self.lane -= 1
         
-        # Find total driving force
-        force = self.mass/dt * (v-self.vel)
+        # Return the total driving force
+        return self.mass/dt * (v-self.vel)
+            
+    def step(self, dt):
+        # Find the driving force
+        force = self.drive(dt)
         
         # Simulate actual driving
-        if force.lensq() > self.max_force**2:
+        if force > self.max_force:
             force = self.max_force*force.norm()
             
         vel = self.vel + (force*dt)/self.mass
         spin = angle(vel, self.head)
         
-        if vel.iszero():
+        if vel.lensq() == 0:
             head = self.head
         elif spin > self.max_spin*dt:
             head = self.head.rotate(self.max_spin*dt)
@@ -137,7 +151,7 @@ class Car:
         else:
             head = vel.norm()
             
-        if vel.lensq() > self.max_speed**2:
+        if vel > self.max_speed:
             vel = self.max_speed*vel.norm()
             
         self.vel = vel

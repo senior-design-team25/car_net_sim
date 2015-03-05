@@ -126,9 +126,6 @@ class vec(tuple):
     def len(v):
         return math.sqrt(v.lensq())
         
-    def iszero(v):
-        return abs(v.lensq()) < EPS
-        
     def norm(v):
         return v / v.len()
         

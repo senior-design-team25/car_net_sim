@@ -143,9 +143,9 @@ class Map:
         self.entities = []
         self.vehicles = []
         
-        #r = Road(vec(0, 0), vec(Map.WIDTH, Map.HEIGHT), (2,2))
-        #s0 = Spawner(vec(0, 0), vec(1,1).norm(), (2,2))
-        #s1 = Spawner(vec(100, 100), vec(-1,-1).norm(), (2,2))
+        #r = Road(vec(0, 0), vec(Map.WIDTH, Map.HEIGHT), (5,5))
+        #s0 = Spawner(vec(0, 0), vec(1,1).norm(), (5,5))
+        #s1 = Spawner(vec(100, 100), vec(-1,-1).norm(), (5,5))
         r = Road(vec(0, 50), vec(100, 50), (5,5))
         s0 = Spawner(vec(0, 50), vec(1,0).norm(), (5,5))
         s1 = Spawner(vec(100, 50), vec(-1,0).norm(), (5,5))
