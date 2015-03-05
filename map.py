@@ -93,6 +93,7 @@ class Road:
             
         target.lanes = self.lanes[side]
         target.width = Road.LANE
+        target.head = head
             
         return target 
 
@@ -145,9 +146,9 @@ class Map:
         #r = Road(vec(0, 0), vec(Map.WIDTH, Map.HEIGHT), (2,2))
         #s0 = Spawner(vec(0, 0), vec(1,1).norm(), (2,2))
         #s1 = Spawner(vec(100, 100), vec(-1,-1).norm(), (2,2))
-        r = Road(vec(0, 50), vec(100, 50), (4,4))
-        s0 = Spawner(vec(0, 50), vec(1,0).norm(), (4,4))
-        s1 = Spawner(vec(100, 50), vec(-1,0).norm(), (4,4))
+        r = Road(vec(0, 50), vec(100, 50), (5,5))
+        s0 = Spawner(vec(0, 50), vec(1,0).norm(), (5,5))
+        s1 = Spawner(vec(100, 50), vec(-1,0).norm(), (5,5))
         
         r.nt = s0.target(), s1.target()
         s0.nt = r.target(0),

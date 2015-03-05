@@ -50,8 +50,8 @@ class Car:
         config.use('LOOKAHEAD_TIME', 1.5, self, 'lookahead_time')
         config.use('LOOKAHEAD_MIN', self.HEIGHT, self, 'lookahead_min')
         
-        config.use('REACTION_TIME', 1, self, 'reaction_time')
-        config.use('LANE_CHANGE_CHANCE', 1, self, 'lane_change_chance')
+        config.use('REACTION_TIME', 1.0, self, 'reaction_time')
+        config.use('LANE_CHANGE_CHANCE', 1.0, self, 'lane_change_chance')
     
         self.target = target
         self.lane = lane
@@ -74,13 +74,14 @@ class Car:
             
     def step(self, dt):    
         # Find target force
-        target = self.target(self)
+        target = self.target
+        t = target(self)
         
-        if not target:
+        if not t:
             self.map.remove(self)
             return
         
-        targetv = self.max_speed * (target - self.pos).norm()
+        v = self.max_speed * (t - self.pos).norm()
         
         # Find collision avoiding forces
         stopdist = self.stopdist()
@@ -89,34 +90,34 @@ class Car:
                  if c.pos - self.pos < stopdist and c != self]
         
         fnbors = [(c,d) for c,d in nbors
-                  if projectunit(d, ~self.head) < Car.WIDTH
-                     and d * self.head > 0]
+                  if projectunit(d, ~self.head) < Car.WIDTH and
+                     d * self.head > 0]
                   
         if fnbors:
             fd = min(d*self.head for _,d in fnbors)
-            targetv *= max((fd - Car.HEIGHT) / stopdist, 0)
+            v *= max((fd - Car.HEIGHT) / stopdist, 0)
             
-            if random() < dt*self.lane_change_chance:
+            # Decide if we want to change lanes
+            if random() < dt*self.lane_change_chance and \
+               projectunit(t-self.pos, ~target.head) < Car.WIDTH/4:
                 rnbors = [(c,d) for c,d in nbors
-                          if projectunit(d, ~self.head) < 2*self.target.width
-                          if d * ~self.head > 0]
+                          if projectunit(d, ~target.head) < 2*target.width and
+                             d * ~target.head > 0]
                         
                 lnbors = [(c,d) for c,d in nbors
-                          if projectunit(d, ~self.head) < 2*self.target.width
-                          if d * ~self.head < 0]
+                          if projectunit(d, ~target.head) < 2*target.width and
+                             d * ~target.head < 0]
                       
-                rd = min(d*self.head for _,d in rnbors) if rnbors else vec(1e309,1e309)
-                ld = min(d*self.head for _,d in lnbors) if lnbors else vec(1e309,1e309)
+                rd = min(d*target.head for _,d in rnbors) if rnbors else vec(1e309,1e309)
+                ld = min(d*target.head for _,d in lnbors) if lnbors else vec(1e309,1e309)
                 
-                if rd > ld:
-                    if rd > fd and self.lane < self.target.lanes-1:
+                if rd/3 > fd and self.lane < target.lanes-1:
                         self.lane += 1
-                else:
-                    if ld > fd and self.lane > 0:
+                elif ld/3 > fd and self.lane > 0:
                         self.lane -= 1
         
         # Find total driving force
-        force = self.mass/dt * (targetv-self.vel)
+        force = self.mass/dt * (v-self.vel)
         
         # Simulate actual driving
         if force.lensq() > self.max_force**2:
