@@ -1,6 +1,7 @@
 
 from vmath import *
 import math
+from itertools import *
 from random import random
 from queue import queue
 from config import global_config as config
@@ -12,6 +13,7 @@ from PySide.QtCore import *
 class CarGraphic(QGraphicsItem):
     def __init__(self, pos, head):
         super(CarGraphic, self).__init__()
+        self.color = Qt.yellow
         self.set(pos, head)
         
     def set(self, (x,y), head):
@@ -25,14 +27,14 @@ class CarGraphic(QGraphicsItem):
         painter.setPen(Qt.NoPen)
         painter.setBrush(Qt.black)
         painter.drawRect(QRectF(-Car.WIDTH/2, -Car.HEIGHT/2, Car.WIDTH, Car.HEIGHT))
-        painter.setBrush(Qt.yellow)
+        painter.setBrush(self.color)
         painter.drawRect(QRectF(-Car.WIDTH/2+CarGraphic.LINE, -Car.HEIGHT/2+CarGraphic.LINE, 
                                 Car.WIDTH-2*CarGraphic.LINE, Car.HEIGHT-2*CarGraphic.LINE))
         
         painter.setBrush(Qt.black)
         painter.drawRect(QRectF(-Car.WIDTH/2+CarGraphic.LINE, -Car.HEIGHT/4, 
                                 Car.WIDTH-2*CarGraphic.LINE, 0.375*Car.HEIGHT))
-        painter.setBrush(Qt.yellow)
+        painter.setBrush(self.color)
         painter.drawRect(QRectF(-Car.WIDTH/2+CarGraphic.LINE, -Car.HEIGHT/4+CarGraphic.LINE, 
                                 Car.WIDTH-2*CarGraphic.LINE, 0.375*Car.HEIGHT-2*CarGraphic.LINE))
                                 
@@ -40,7 +42,6 @@ config.use('LINE_WIDTH', 0.125, CarGraphic, 'LINE', float)
 
         
 # Representation of a car
-
 class Car:
     def __init__(self, target, lane, pos, head=vec(0,0), vel=vec(0,0)):
         config.use('CAR_MASS', 100.0, self, 'mass')
@@ -52,19 +53,37 @@ class Car:
         config.use('LOOKAHEAD_MIN', self.HEIGHT, self, 'lookahead_min')
         
         config.use('REACTION_TIME', 1.0, self, 'reaction_time')
+        config.use('REMOVAL_DELAY', 1.0, self, 'removal_delay')
         config.use('LANE_CHANGE_CHANCE', 1.0, self, 'lane_change_chance')
-    
+        
         self.target = target
         self.lane = lane
         self.pos = pos
         self.head = head
         self.vel = vel
+        self.dead = False
         
         self.messages = queue()
         
         self.graphic = CarGraphic(pos, self.head)
         
-    # predicted distance to complete stop from current velocity
+    # Mark as dead
+    def die(self):
+        self.graphic.color = Qt.red
+        self.dead = True
+        
+        time = self.map.time + self.removal_delay
+        
+        def dead(car):
+            if car.map.time > time:
+                return None
+            else:
+                return car.pos
+                
+        self.target = dead
+            
+        
+    # Predicted distance to complete stop from current velocity
     def stopdist(self):
         s = self.vel.len()
         t = (s * self.mass)/self.max_force
@@ -79,6 +98,11 @@ class Car:
     def nbors(self, dist):
         return [c for c in self.map.vehicles
                 if c != self and c.pos - self.pos < dist]
+                
+    # Finds cars that are in collision with this car
+    def collisions(self):
+        return [v for v in self.nbors(2*self.radius())
+                if self.graphic.collidesWithItem(v.graphic)]
         
     # Sends a message to this car
     def send(self, message, delay=0):
@@ -122,7 +146,10 @@ class Car:
             self.map.remove(self)
             return vec(0,0)
         
-        v = self.max_speed * (t - self.pos).norm()
+        if t != self.pos:
+            v = self.max_speed * (t - self.pos).norm()
+        else:
+            v = vec(0,0)
         
         # Find collision avoiding forces
         stopdist = self.stopdist()
@@ -133,7 +160,7 @@ class Car:
                   if d * self.head > 0 and
                      projectunit(d, ~self.head) < Car.WIDTH]
                   
-        if fnbors:
+        if hasattr(target, 'lanes') and fnbors:
             fd = min(d*self.head for d in fnbors)
             v *= max((fd - Car.HEIGHT) / stopdist, 0)
             
@@ -163,7 +190,7 @@ class Car:
         # Find the driving force
         force = self.drive(dt)
         
-        # Simulate actual driving
+        # Simulate physical driving
         if force > self.max_force:
             force = self.max_force*force.norm()
             
@@ -188,7 +215,21 @@ class Car:
         self.head = head
         self.pos += dt*vel
         
+        # Update graphic
         self.graphic.set(self.pos, self.head)
+        
+        # Check for collisions
+        if not self.dead:
+            collisions = self.collisions()
+            
+            if collisions:
+                self.map.collisions += 1
+                self.die()
+                
+                for v in collisions:
+                    v.die()
+            
+        
         
 config.use('CAR_WIDTH', 1.0, Car, 'WIDTH')
 config.use('CAR_HEIGHT', 2.0, Car, 'HEIGHT')

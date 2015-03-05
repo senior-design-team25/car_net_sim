@@ -22,3 +22,9 @@ class queue(object):
             return self.list[0]
         else:
             return None
+            
+    def __len__(self):
+        return len(self.list)
+        
+    def __repr__(self):
+        return 'queue(%s)' % self.list

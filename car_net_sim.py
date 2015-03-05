@@ -106,6 +106,15 @@ class SimControl(QWidget):
         
         box.addWidget(reset)
         
+        self.time = QLabel()
+        box.addWidget(self.time)
+        self.vehicles = QLabel()
+        box.addWidget(self.vehicles)
+        self.messages = QLabel()
+        box.addWidget(self.messages)
+        self.collisions = QLabel()
+        box.addWidget(self.collisions)
+        
         cbox = QHBoxLayout()
         load = QPushButton('Load')
         load.clicked.connect(config.load)
@@ -132,8 +141,14 @@ class SimControl(QWidget):
         config.eval(key, input.text())
         
     def reset(self):
-        for c in list(self.map.vehicles):
-            self.map.remove(c)
+        self.map.reset()
+            
+    def update(self):
+        self.time.setText('Time: %0.3fs' % self.map.time)
+        self.vehicles.setText('Vehicles: %d' % len(self.map.vehicles))
+        self.messages.setText('Messages: %d' % sum(len(v.messages) for v in self.map.vehicles))
+        self.collisions.setText('Collisions: %d' % self.map.collisions)
+        
         
 
 class CarNetSim(QWidget):
@@ -188,6 +203,7 @@ class CarNetSim(QWidget):
         self.time = ntime
         
         self.map.step(1.0/(60.0))
+        self.control.update()
 
         
 def main():

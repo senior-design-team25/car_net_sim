@@ -117,7 +117,11 @@ class Spawner:
         offset = (offset * ~self.head) + self.pos
     
         if random() < dt*self.spawn_chance:
-            self.map.add(Car(self.nt[0], lane, offset, self.head))
+            c = Car(self.nt[0], lane, offset, self.head)
+            self.map.add(c)
+            
+            if c.collisions():
+                self.map.remove(c)
     
     def target(self):
         return lambda car: None
@@ -141,6 +145,7 @@ class Map:
     def __init__(self):
         self.graphic = MapGraphic()
         self.time = 0
+        self.collisions = 0
         self.entities = []
         self.vehicles = []
         
@@ -158,6 +163,12 @@ class Map:
         self.add(r)
         self.add(s0)
         self.add(s1)
+        
+    def reset(self):
+        for c in list(self.vehicles):
+            self.remove(c)
+            
+        self.collisions = 0
              
     def add(self, entry):
         entry.map = self
