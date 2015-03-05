@@ -92,7 +92,7 @@ class Car:
         s = self.vel.len()
         t = (s * self.mass)/self.max_force
         d = s*t - (self.max_force * t**2) / (2*self.mass)
-        return d + Car.HEIGHT + t*self.reaction_time
+        return d + Car.HEIGHT + s*self.reaction_time
         
     # Estimated radius of car
     def radius(self):
