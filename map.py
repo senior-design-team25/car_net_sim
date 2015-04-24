@@ -168,6 +168,7 @@ class Map:
         for c in list(self.vehicles):
             self.remove(c)
             
+        self.time = 0
         self.collisions = 0
              
     def add(self, entry):

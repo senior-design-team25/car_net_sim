@@ -13,6 +13,17 @@ def human(car):
         return [d + (car.time()-t)*v + ((car.time()-t)**2)*a/2 for d,v,a,t in recent]
     else:
         return []
+        
+def morehuman(car):
+    nbors = [(c.pos - car.pos, c.vel - car.vel, car.time()) 
+             for c in car.nbors(car.stopdist())]
+    car.send(nbors, car.reaction_time)
+    recent = car.recent()
+    
+    if recent:
+        return [d + (car.time()-t)*v for d,v,t in recent]
+    else:
+        return []
 
 # Only understands the concept of position
 def bad(car):
@@ -26,6 +37,7 @@ def god(car):
     return [c.pos - car.pos for c in car.nbors(car.stopdist())]
     
 drivers = {
+    'morehuman': morehuman,
     'human': human,
     'bad': bad,
     'god': god,
