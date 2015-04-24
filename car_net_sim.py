@@ -1,6 +1,6 @@
 import sys
 import io
-from time import time
+from time import time, sleep
 from functools import partial
 
 from config import global_config as config
@@ -95,9 +95,11 @@ class SimScene(QGraphicsView):
       
         
 class SimControl(QWidget):
-    def __init__(self, map):
+    def __init__(self, map, timeout, out):
         super(SimControl, self).__init__()
+        self.timeout = timeout
         self.map = map
+        self.out = out
         
         box = QVBoxLayout()
         
@@ -144,6 +146,12 @@ class SimControl(QWidget):
         self.map.reset()
             
     def update(self):
+        if self.map.time > self.timeout:
+            self.out.write('Time: %0.3fs\n' % self.map.time)
+            self.out.write('Collisions: %d\n' % self.map.collisions)
+            self.out.flush()
+            sys.exit(0)
+    
         self.time.setText('Time: %0.3fs' % self.map.time)
         self.vehicles.setText('Vehicles: %d' % len(self.map.vehicles))
         self.messages.setText('Messages: %d' % sum(len(v.messages) for v in self.map.vehicles))
@@ -152,7 +160,7 @@ class SimControl(QWidget):
         
 
 class CarNetSim(QWidget):
-    def __init__(self):
+    def __init__(self, timeout):
         super(CarNetSim, self).__init__()
         
         self.map = Map()
@@ -161,7 +169,7 @@ class CarNetSim(QWidget):
         
         self.console = SimConsole()
         self.scene = SimScene(self.map)
-        self.control = SimControl(self.map)
+        self.control = SimControl(self.map, timeout, sys.stdout)
         
         self.timer = QBasicTimer()
         self.time = time()
@@ -208,7 +216,7 @@ class CarNetSim(QWidget):
         
 def main():
     root = QApplication(sys.argv)
-    sim = CarNetSim()
+    sim = CarNetSim(float(sys.argv[1] if len(sys.argv) >= 2 else 'inf'))
     sim.show()
     sys.exit(root.exec_())
     
