@@ -58,6 +58,8 @@ class Car:
         config.use('LANE_CHANGE_CHANCE', 1.0, self, 'lane_change_chance')
         
         config.use('DRIVER', 'god', self, 'driver')
+        config.use('RANGE', 20.0, self, 'range')
+        config.use('LATENCY', 0.05, self, 'latency')
         
         self.target = target
         self.lane = lane

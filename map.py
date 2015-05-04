@@ -152,9 +152,9 @@ class Map:
         #r = Road(vec(0, 0), vec(Map.WIDTH, Map.HEIGHT), (5,5))
         #s0 = Spawner(vec(0, 0), vec(1,1).norm(), (5,5))
         #s1 = Spawner(vec(100, 100), vec(-1,-1).norm(), (5,5))
-        r = Road(vec(0, 50), vec(100, 50), (5,5))
-        s0 = Spawner(vec(0, 50), vec(1,0).norm(), (5,5))
-        s1 = Spawner(vec(100, 50), vec(-1,0).norm(), (5,5))
+        r = Road(vec(50, 0), vec(50, 100), (4,4))
+        s0 = Spawner(vec(50, 0), vec(0,1).norm(), (4,4))
+        s1 = Spawner(vec(50, 100), vec(0,-1).norm(), (4,4))
         
         r.nt = s0.target(), s1.target()
         s0.nt = r.target(0),
